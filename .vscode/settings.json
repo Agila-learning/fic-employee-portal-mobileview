@@ -1,0 +1,18 @@
+{
+  "java.project.resourceFilters": [
+    "node_modules",
+    ".git",
+    "ios",
+    "android"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true
+  }
+}
