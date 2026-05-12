@@ -3,6 +3,7 @@ module.exports = function (api) {
   return {
     presets: [
       ['module:@react-native/babel-preset', { jsxImportSource: 'nativewind' }],
+      'nativewind/babel',
     ],
     plugins: [
       'react-native-worklets/plugin',

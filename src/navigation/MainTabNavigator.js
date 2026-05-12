@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { AuthContext } from '../context/AuthContext';
 
 import DashboardScreen       from '../screens/main/DashboardScreen';
 import AttendanceScreen      from '../screens/main/AttendanceScreen';
@@ -10,47 +11,80 @@ import PayslipScreen         from '../screens/main/PayslipScreen';
 import NotificationsScreen   from '../screens/main/NotificationsScreen';
 import ProfileScreen         from '../screens/main/ProfileScreen';
 
+// Admin Screens
+import AdminAttendanceScreen from '../screens/admin/AdminAttendanceScreen';
+import AdminLeaveScreen      from '../screens/admin/AdminLeaveScreen';
+
 const Tab = createBottomTabNavigator();
 
-const TABS = [
-  { name: 'Dashboard',      component: DashboardScreen,     icon: ['view-dashboard', 'view-dashboard-outline'] },
-  { name: 'Attendance',     component: AttendanceScreen,    icon: ['clock-check', 'clock-check-outline'] },
-  { name: 'Tasks',          component: TasksScreen,         icon: ['clipboard-list', 'clipboard-list-outline'] },
-  { name: 'Leaves',         component: LeaveScreen,         icon: ['calendar-account', 'calendar-account-outline'] },
-  { name: 'Payslips',       component: PayslipScreen,       icon: ['cash-multiple', 'cash-multiple'] },
-  { name: 'Notifications',  component: NotificationsScreen, icon: ['bell', 'bell-outline'] },
-  { name: 'Profile',        component: ProfileScreen,       icon: ['account-circle', 'account-circle-outline'] },
-];
-
 export default function MainTabNavigator() {
+  const { user } = useContext(AuthContext);
+  const role = user?.role;
+  const isAdmin = ['admin', 'super-admin', 'md', 'sub-admin'].includes(role);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          const tab = TABS.find((t) => t.name === route.name);
-          const iconName = tab ? tab.icon[focused ? 0 : 1] : 'circle';
-          return <Icon name={iconName} size={size} color={color} />;
+          let iconName;
+          if (route.name === 'Dashboard') iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
+          else if (route.name === 'Employees') iconName = focused ? 'account-group' : 'account-group-outline';
+          else if (route.name === 'Attendance') iconName = focused ? 'clock-check' : 'clock-check-outline';
+          else if (route.name === 'Approvals') iconName = focused ? 'check-decagram' : 'check-decagram-outline';
+          else if (route.name === 'Salary') iconName = focused ? 'cash-multiple' : 'cash-multiple';
+          else if (route.name === 'Tasks') iconName = focused ? 'clipboard-list' : 'clipboard-list-outline';
+          else if (route.name === 'Leaves') iconName = focused ? 'calendar-account' : 'calendar-account-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'account-circle' : 'account-circle-outline';
+          return <Icon name={iconName || 'circle'} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1A365D',
+        tabBarActiveTintColor: '#094fbc',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 4,
+          height: 70,
+          paddingBottom: 12,
+          paddingTop: 8,
           borderTopWidth: 1,
-          borderTopColor: '#e2e8f0',
+          borderTopColor: '#f1f5f9',
           backgroundColor: '#ffffff',
-          elevation: 8,
+          elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
-        headerStyle: { backgroundColor: '#1A365D' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: -4 },
+        headerShown: false,
       })}
     >
-      {TABS.map((tab) => (
-        <Tab.Screen key={tab.name} name={tab.name} component={tab.component} />
-      ))}
+      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      
+      {/* Admin Tabs */}
+      <Tab.Screen 
+        name="Employees" 
+        component={AdminAttendanceScreen} 
+        options={{ tabBarButton: isAdmin ? undefined : () => null }}
+      />
+      <Tab.Screen 
+        name="Approvals" 
+        component={AdminLeaveScreen} 
+        options={{ tabBarButton: isAdmin ? undefined : () => null }}
+      />
+      
+      {/* Employee Tabs */}
+      <Tab.Screen 
+        name="Attendance" 
+        component={AttendanceScreen} 
+        options={{ tabBarButton: !isAdmin ? undefined : () => null }}
+      />
+      <Tab.Screen 
+        name="Tasks" 
+        component={TasksScreen} 
+        options={{ tabBarButton: !isAdmin ? undefined : () => null }}
+      />
+      <Tab.Screen 
+        name="Leaves" 
+        component={LeaveScreen} 
+        options={{ tabBarButton: !isAdmin ? undefined : () => null }}
+      />
+      
+      <Tab.Screen name="Salary" component={PayslipScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

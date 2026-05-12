@@ -4,7 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 
 import { AuthContext } from '../context/AuthContext';
 import AuthStack from './AuthStack';
-import MainTabNavigator from './MainTabNavigator';
+import MainStack from './MainStack';
 
 export default function AppNavigator() {
   const { token, loading } = useContext(AuthContext);
@@ -19,7 +19,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {token ? <MainTabNavigator /> : <AuthStack />}
+      {token ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

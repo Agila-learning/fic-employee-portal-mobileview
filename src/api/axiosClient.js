@@ -1,10 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://10.0.2.2:5000/api';
+const API_URL = 'https://forgeindiaconnect.in/api';
 
 const axiosClient = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 second timeout for heavy production data
   headers: {
     'Content-Type': 'application/json',
   },

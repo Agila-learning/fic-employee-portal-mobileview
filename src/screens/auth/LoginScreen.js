@@ -1,5 +1,16 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -15,76 +26,107 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
-
     setLoading(true);
     const result = await login(email, password);
     setLoading(false);
-
     if (!result.success) {
       Alert.alert('Login Failed', result.message);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-gray-50 justify-center p-6"
+      className="flex-1 bg-background"
     >
-      <View className="mb-10 items-center">
-        <View className="bg-primary rounded-full p-4 mb-4">
-          <Icon name="shield-account" size={50} color="white" />
-        </View>
-        <Text className="text-3xl font-bold text-primary">FIC Portal</Text>
-        <Text className="text-gray-500 mt-2">Employee Mobile Access</Text>
-      </View>
-
-      <View className="space-y-4">
-        <View>
-          <Text className="text-gray-700 font-medium mb-1">Email</Text>
-          <View className="flex-row items-center bg-white border border-gray-300 rounded-lg px-3">
-            <Icon name="email-outline" size={20} color="#6b7280" />
-            <TextInput
-              className="flex-1 py-3 px-2 text-black"
-              placeholder="Enter your email"
-              placeholderTextColor="#9ca3af"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        className="px-6 py-10"
+      >
+        {/* Header / Logo Section */}
+        <View className="items-center mt-12 mb-10">
+          <View className="bg-primary p-5 rounded-3xl shadow-lg shadow-primary/30">
+            <Icon name="shield-account" size={50} color="white" />
           </View>
+          <Text className="text-3xl font-bold text-primary mt-6 tracking-tight">
+            FIC Portal
+          </Text>
+          <Text className="text-muted-foreground mt-2 text-center">
+            Professional Employee Access
+          </Text>
         </View>
-
-        <View>
-          <Text className="text-gray-700 font-medium mb-1">Password</Text>
-          <View className="flex-row items-center bg-white border border-gray-300 rounded-lg px-3">
-            <Icon name="lock-outline" size={20} color="#6b7280" />
-            <TextInput
-              className="flex-1 py-3 px-2 text-black"
-              placeholder="Enter your password"
-              placeholderTextColor="#9ca3af"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Icon name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
-            </TouchableOpacity>
+        
+        {/* Login Form */}
+        <View className="space-y-5">
+          {/* Email Field */}
+          <View>
+            <Text className="text-sm font-semibold text-foreground mb-2 ml-1">Email Address</Text>
+            <View className="flex-row items-center bg-white border border-border rounded-2xl px-4 py-1 shadow-sm">
+              <Icon name="email-outline" size={20} color="#64748b" />
+              <TextInput
+                className="flex-1 h-12 ml-3 text-foreground text-base"
+                placeholder="name@company.com"
+                placeholderTextColor="#94a3b8"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
           </View>
+          
+          {/* Password Field */}
+          <View>
+            <Text className="text-sm font-semibold text-foreground mb-2 ml-1">Password</Text>
+            <View className="flex-row items-center bg-white border border-border rounded-2xl px-4 py-1 shadow-sm">
+              <Icon name="lock-outline" size={20} color="#64748b" />
+              <TextInput
+                className="flex-1 h-12 ml-3 text-foreground text-base"
+                placeholder="••••••••"
+                placeholderTextColor="#94a3b8"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
+                <Icon
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#64748b"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <TouchableOpacity className="self-end mt-1">
+            <Text className="text-primary font-semibold text-sm">Forgot Password?</Text>
+          </TouchableOpacity>
+          
+          {/* Sign In Button */}
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+            className={`mt-6 py-4 rounded-2xl items-center shadow-md shadow-primary/20 ${
+              loading ? 'bg-primary/70' : 'bg-primary'
+            }`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-lg font-bold">Sign In</Text>
+            )}
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          className="bg-primary rounded-lg py-4 mt-4 flex-row justify-center items-center"
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white text-center font-bold text-lg">Sign In</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        
+        {/* Footer */}
+        <View className="mt-auto pt-10 items-center">
+          <Text className="text-muted-foreground text-xs">
+            © 2026 Agila Learning. All rights reserved.
+          </Text>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

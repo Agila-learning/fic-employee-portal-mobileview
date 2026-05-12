@@ -6,50 +6,52 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import axiosClient from '../../api/axiosClient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const QUICK_ACTIONS = [
-  { label: 'Attendance',     tab: 'Attendance',    icon: 'clock-check-outline',    color: '#3b82f6', border: 'border-blue-500' },
-  { label: 'Tasks',          tab: 'Tasks',         icon: 'clipboard-list-outline', color: '#22c55e', border: 'border-green-500' },
-  { label: 'Leaves',         tab: 'Leaves',        icon: 'calendar-account-outline',color: '#a855f7',border: 'border-purple-500' },
-  { label: 'Payslips',       tab: 'Payslips',      icon: 'cash-multiple',          color: '#f97316', border: 'border-orange-500' },
-  { label: 'Notifications',  tab: 'Notifications', icon: 'bell-outline',           color: '#06b6d4', border: 'border-cyan-500' },
-  { label: 'Profile',        tab: 'Profile',       icon: 'account-circle-outline', color: '#64748b', border: 'border-slate-400' },
-];
-
-function timeAgo(dateStr) {
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
-const DEMO_ACTIVITY = [
-  { _id: 'a1', dot: 'bg-green-500', text: 'Clocked in at 09:00 AM',            time: new Date(Date.now() - 3600000).toISOString() },
-  { _id: 'a2', dot: 'bg-blue-500',  text: 'Task "Update CRM" assigned to you', time: new Date(Date.now() - 7200000).toISOString() },
-  { _id: 'a3', dot: 'bg-purple-500',text: 'Leave request approved',            time: new Date(Date.now() - 86400000).toISOString() },
+  { label: 'Employees',     tab: 'Employees',     icon: 'account-group',           color: '#3b82f6' },
+  { label: 'Tasks',         tab: 'Tasks',         icon: 'clipboard-list-outline',  color: '#22c55e', adminTab: 'AdminTasks' },
+  { label: 'Approvals',     tab: 'Approvals',     icon: 'check-decagram-outline',  color: '#a855f7' },
+  { label: 'Reports',       tab: 'Reports',       icon: 'file-chart-outline',      color: '#06b6d4', adminTab: 'AdminReports' },
+  { label: 'Salary',        tab: 'Salary',        icon: 'cash-multiple',           color: '#f97316' },
+  { label: 'Profile',       tab: 'Profile',       icon: 'account-circle-outline',  color: '#64748b' },
 ];
 
 export default function DashboardScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
-  const [activity, setActivity] = useState(DEMO_ACTIVITY);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  const isAdmin = ['admin', 'super-admin', 'md', 'sub-admin'].includes(user?.role);
 
-  useEffect(() => { fetchDashboard(); }, []);
+  useEffect(() => { 
+    const timer = setTimeout(() => fetchDashboard(), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchDashboard = async () => {
     try {
       setLoadingStats(true);
-      const res = await axiosClient.get('/dashboard/summary');
-      setStats(res.data);
-      if (res.data?.recentActivity?.length) setActivity(res.data.recentActivity);
-    } catch {
-      // Use default demo data silently
+      if (isAdmin) {
+        const empRes = await axiosClient.get('/operations/attendance');
+        setStats(prev => ({ ...prev, totalEmployees: empRes.data?.length || 0, presentToday: empRes.data?.filter(a => a.status === 'present').length || 0 }));
+        const leaveRes = await axiosClient.get('/operations/leave');
+        setStats(prev => ({ ...prev, pendingLeaves: leaveRes.data?.filter(l => l.status === 'pending').length || 0 }));
+      } else {
+        const leadRes = await axiosClient.get('/leads');
+        setStats({
+          totalLeads: leadRes.data?.length || 0,
+          convertedLeads: leadRes.data?.filter(l => l.status === 'converted').length || 0,
+          successLeads: leadRes.data?.filter(l => l.status === 'success').length || 0
+        });
+      }
+    } catch (error) {
+      console.error('Dashboard error', error);
     } finally {
       setLoadingStats(false);
     }
@@ -57,80 +59,103 @@ export default function DashboardScreen({ navigation }) {
 
   const onRefresh = async () => { setRefreshing(true); await fetchDashboard(); setRefreshing(false); };
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
   return (
-    <ScrollView
-      className="flex-1 bg-gray-50"
+    <ScrollView 
+      className="flex-1 bg-background"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* Header Banner */}
-      <View className="bg-[#1A365D] px-5 pt-8 pb-10">
-        <Text className="text-blue-200 text-sm">{greeting()},</Text>
-        <Text className="text-white text-2xl font-extrabold mt-0.5">{user?.name || 'Employee'}</Text>
-        <Text className="text-blue-300 text-xs mt-1 capitalize">{user?.role || 'Staff'} · {user?.branch || 'HQ'}</Text>
+      <View className="bg-primary pt-12 pb-16 px-6 rounded-b-[40px] shadow-2xl">
+        <View className="flex-row justify-between items-center">
+          <View>
+            <Text className="text-blue-100 text-sm font-medium">Hello,</Text>
+            <Text className="text-white text-3xl font-bold mt-1 tracking-tight">{user?.name || 'Admin'}</Text>
+          </View>
+          <TouchableOpacity className="bg-white/20 p-2 rounded-full">
+            <Icon name="bell-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+        <View className="flex-row items-center mt-4 bg-white/10 self-start px-3 py-1 rounded-full">
+          <Icon name="shield-star" size={14} color="#fbbf24" />
+          <Text className="text-white text-xs font-semibold ml-1 capitalize">
+            {user?.role || 'Admin'} · {isAdmin ? 'All Branches' : (user?.branch || 'HQ')}
+          </Text>
+        </View>
       </View>
 
-      {/* Stats Row — overlaps banner */}
-      <View className="flex-row mx-4 -mt-5 mb-4 gap-3">
+      <View className="flex-row px-4 -mt-10 space-x-3">
         {loadingStats ? (
-          <View className="flex-1 bg-white rounded-2xl shadow-sm p-4 items-center">
-            <ActivityIndicator color="#1A365D" />
-          </View>
+          <View className="flex-1 bg-white p-6 rounded-3xl items-center"><ActivityIndicator color="#094fbc" /></View>
         ) : (
           <>
-            <StatCard icon="clock-check-outline" color="#3b82f6" label="Present Days" value={stats?.presentDays ?? '—'} />
-            <StatCard icon="clipboard-list-outline" color="#22c55e" label="Pending Tasks" value={stats?.pendingTasks ?? '—'} />
-            <StatCard icon="calendar-account-outline" color="#a855f7" label="Leaves Left" value={stats?.leavesLeft ?? '—'} />
+            {isAdmin ? (
+              <>
+                <StatCard 
+                  icon="account-group" color="#3b82f6" label="Total Staff" value={stats?.totalEmployees ?? '0'} 
+                  onPress={() => navigation.navigate('Employees')}
+                />
+                <StatCard 
+                  icon="account-check" color="#10b981" label="Present Today" value={stats?.presentToday ?? '0'} 
+                  onPress={() => navigation.navigate('Employees')}
+                />
+                <StatCard 
+                  icon="calendar-clock" color="#f59e0b" label="Pending Leaves" value={stats?.pendingLeaves ?? '0'} 
+                  onPress={() => navigation.navigate('Approvals')}
+                />
+              </>
+            ) : (
+              <>
+                <StatCard icon="file-document-outline" color="#3b82f6" label="Total Leads" value={stats?.totalLeads ?? '0'} />
+                <StatCard icon="check-decagram-outline" color="#10b981" label="Converted" value={stats?.convertedLeads ?? '0'} />
+                <StatCard icon="trophy-outline" color="#f59e0b" label="Success" value={stats?.successLeads ?? '0'} />
+              </>
+            )}
           </>
         )}
       </View>
 
-      {/* Quick Actions Grid */}
-      <Text className="text-base font-bold text-gray-700 mx-4 mb-3">Quick Actions</Text>
-      <View className="flex-row flex-wrap mx-4 gap-3 mb-6">
-        {QUICK_ACTIONS.map((action) => (
-          <TouchableOpacity
-            key={action.tab}
-            className={`bg-white w-[30%] p-3.5 rounded-2xl shadow-sm items-center border-t-4 ${action.border}`}
-            onPress={() => navigation.navigate(action.tab)}
-          >
-            <Icon name={action.icon} size={28} color={action.color} />
-            <Text className="mt-2 text-xs font-semibold text-gray-700 text-center">{action.label}</Text>
-          </TouchableOpacity>
-        ))}
+      <View className="px-6 mt-8">
+        <Text className="text-lg font-bold text-foreground mb-4">Announcements</Text>
+        <View className="bg-indigo-50 border border-indigo-100 rounded-3xl p-8 items-center justify-center">
+          <Icon name="bullhorn-variant" size={30} color="#6366f1" />
+          <Text className="text-indigo-600 font-bold mt-2">No active announcements</Text>
+        </View>
       </View>
 
-      {/* Recent Activity */}
-      <Text className="text-base font-bold text-gray-700 mx-4 mb-3">Recent Activity</Text>
-      <View className="bg-white mx-4 rounded-2xl shadow-sm px-5 py-3 mb-10">
-        {activity.map((item, idx) => (
-          <View key={item._id} className={`flex-row items-start py-3 ${idx < activity.length - 1 ? 'border-b border-gray-100' : ''}`}>
-            <View className={`w-2.5 h-2.5 rounded-full ${item.dot || 'bg-gray-300'} mt-1.5 mr-3`} />
-            <View className="flex-1">
-              <Text className="text-gray-700 text-sm">{item.text}</Text>
-              {item.time && (
-                <Text className="text-gray-400 text-xs mt-0.5">{timeAgo(item.time)}</Text>
-              )}
-            </View>
-          </View>
-        ))}
+      <View className="px-6 mt-8 mb-12">
+        <Text className="text-lg font-bold text-foreground mb-4">Quick Actions</Text>
+        <View className="flex-row flex-wrap justify-between">
+          {QUICK_ACTIONS.filter(a => isAdmin ? true : !['Reports'].includes(a.label)).map((action) => (
+            <TouchableOpacity
+              key={action.label}
+              className="bg-white w-[30%] mb-4 p-4 rounded-3xl items-center shadow-sm border-t-4"
+              style={{ borderTopColor: action.color }}
+              onPress={() => navigation.navigate(isAdmin && action.adminTab ? action.adminTab : action.tab)}
+            >
+              <View className="p-2 rounded-xl" style={{ backgroundColor: `${action.color}15` }}>
+                <Icon name={action.icon} size={26} color={action.color} />
+              </View>
+              <Text className="text-[10px] font-bold text-slate-600 mt-2 text-center">{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-function StatCard({ icon, color, label, value }) {
+function StatCard({ icon, color, label, value, onPress }) {
   return (
-    <View className="flex-1 bg-white rounded-2xl shadow-sm p-3 items-center">
-      <Icon name={icon} size={22} color={color} />
-      <Text className="text-xl font-extrabold text-gray-800 mt-1">{value}</Text>
-      <Text className="text-gray-400 text-[10px] text-center mt-0.5">{label}</Text>
-    </View>
+    <TouchableOpacity 
+      activeOpacity={0.7}
+      onPress={onPress}
+      disabled={!onPress}
+      className="flex-1 bg-white p-4 rounded-3xl items-center shadow-lg"
+    >
+      <View className="p-2 rounded-xl" style={{ backgroundColor: `${color}15` }}>
+        <Icon name={icon} size={22} color={color} />
+      </View>
+      <Text className="text-xl font-black text-slate-800 mt-2">{value}</Text>
+      <Text className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tighter">{label}</Text>
+    </TouchableOpacity>
   );
 }

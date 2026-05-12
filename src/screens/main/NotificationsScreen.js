@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
 import axiosClient from '../../api/axiosClient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+const PRIMARY = '#1A365D';
+
 const ICON_MAP = {
-  announcement: { icon: 'bullhorn-outline', color: '#3b82f6', bg: '#eff6ff' },
-  task:         { icon: 'clipboard-list-outline', color: '#8b5cf6', bg: '#f5f3ff' },
-  leave:        { icon: 'calendar-check-outline', color: '#10b981', bg: '#ecfdf5' },
-  salary:       { icon: 'cash-multiple', color: '#f59e0b', bg: '#fffbeb' },
-  default:      { icon: 'bell-outline', color: '#64748b', bg: '#f1f5f9' },
+  announcement: { icon: 'bullhorn-outline',        color: '#3b82f6', bg: '#eff6ff' },
+  task:         { icon: 'clipboard-list-outline',   color: '#8b5cf6', bg: '#f5f3ff' },
+  leave:        { icon: 'calendar-check-outline',   color: '#10b981', bg: '#ecfdf5' },
+  salary:       { icon: 'cash-multiple',            color: '#f59e0b', bg: '#fffbeb' },
+  default:      { icon: 'bell-outline',             color: '#64748b', bg: '#f1f5f9' },
 };
+
+const DEMO = [
+  { _id: 'n1', type: 'announcement', title: 'Office Closed – Public Holiday', message: 'The office will remain closed on 15th August.', createdAt: new Date(Date.now() - 2 * 3600000).toISOString(), read: false },
+  { _id: 'n2', type: 'task',         title: 'New Task Assigned',              message: 'You have been assigned: "Prepare Q2 Report".', createdAt: new Date(Date.now() - 5 * 3600000).toISOString(), read: false },
+  { _id: 'n3', type: 'leave',        title: 'Leave Approved',                 message: 'Your leave request for 10th Aug has been approved.', createdAt: new Date(Date.now() - 86400000).toISOString(), read: true },
+  { _id: 'n4', type: 'salary',       title: 'Payslip Available',              message: 'Your July 2025 payslip has been generated.', createdAt: new Date(Date.now() - 3 * 86400000).toISOString(), read: true },
+];
 
 function timeAgo(dateStr) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
@@ -26,21 +28,12 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-const DEMO = [
-  { _id: 'n1', type: 'announcement', title: 'Office Closed – Public Holiday', message: 'The office will remain closed on 15th August.', createdAt: new Date(Date.now() - 2 * 3600000).toISOString(), read: false },
-  { _id: 'n2', type: 'task', title: 'New Task Assigned', message: 'You have been assigned: "Prepare Q2 Report".', createdAt: new Date(Date.now() - 5 * 3600000).toISOString(), read: false },
-  { _id: 'n3', type: 'leave', title: 'Leave Approved', message: 'Your leave request for 10th Aug has been approved.', createdAt: new Date(Date.now() - 86400000).toISOString(), read: true },
-  { _id: 'n4', type: 'salary', title: 'Payslip Available', message: 'Your July 2025 payslip has been generated.', createdAt: new Date(Date.now() - 3 * 86400000).toISOString(), read: true },
-];
-
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  useEffect(() => { fetchNotifications(); }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -54,86 +47,67 @@ export default function NotificationsScreen() {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchNotifications();
-    setRefreshing(false);
-  };
+  const onRefresh = async () => { setRefreshing(true); await fetchNotifications(); setRefreshing(false); };
 
-  const markRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-    );
-  };
+  const markRead = (id) =>
+    setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
+
+  const markAllRead = () =>
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const renderItem = ({ item }) => {
-    const style = ICON_MAP[item.type] || ICON_MAP.default;
+    const s = ICON_MAP[item.type] || ICON_MAP.default;
     return (
       <TouchableOpacity
         onPress={() => markRead(item._id)}
-        className={`flex-row items-start mx-4 mb-3 p-4 rounded-2xl border ${
-          item.read ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'
-        }`}
+        style={[styles.notifCard, item.read ? styles.notifRead : styles.notifUnread]}
       >
-        <View
-          className="w-11 h-11 rounded-full items-center justify-center mr-3 mt-0.5"
-          style={{ backgroundColor: style.bg }}
-        >
-          <Icon name={style.icon} size={22} color={style.color} />
+        <View style={[styles.notifIcon, { backgroundColor: s.bg }]}>
+          <Icon name={s.icon} size={22} color={s.color} />
         </View>
-        <View className="flex-1">
-          <View className="flex-row justify-between items-center mb-1">
-            <Text className="font-bold text-gray-800 flex-1 pr-2" numberOfLines={1}>
-              {item.title}
-            </Text>
-            {!item.read && (
-              <View className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-            )}
+        <View style={{ flex: 1 }}>
+          <View style={styles.notifRow}>
+            <Text style={styles.notifTitle} numberOfLines={1}>{item.title}</Text>
+            {!item.read && <View style={styles.unreadDot} />}
           </View>
-          <Text className="text-gray-500 text-sm" numberOfLines={2}>
-            {item.message}
-          </Text>
-          <Text className="text-gray-400 text-xs mt-2">{timeAgo(item.createdAt)}</Text>
+          <Text style={styles.notifMsg} numberOfLines={2}>{item.message}</Text>
+          <Text style={styles.notifTime}>{timeAgo(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-[#1A365D] pt-6 pb-6 px-5 mb-4 flex-row justify-between items-center">
+      <View style={styles.header}>
         <View>
-          <Text className="text-white text-2xl font-bold">Notifications</Text>
-          {unreadCount > 0 && (
-            <Text className="text-blue-200 text-sm mt-1">{unreadCount} unread</Text>
-          )}
+          <Text style={styles.heading}>Notifications</Text>
+          {unreadCount > 0 && <Text style={styles.unreadCount}>{unreadCount} unread</Text>}
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity
-            onPress={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
-            className="bg-white/20 px-3 py-1.5 rounded-full"
-          >
-            <Text className="text-white text-xs font-semibold">Mark all read</Text>
+          <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
+            <Text style={styles.markAllText}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1A365D" className="mt-16" />
+        <ActivityIndicator size="large" color={PRIMARY} style={{ marginTop: 60 }} />
       ) : (
         <FlatList
           data={notifications}
           keyExtractor={(item) => item._id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <View className="items-center mt-20">
+            <View style={styles.emptyState}>
               <Icon name="bell-sleep-outline" size={64} color="#cbd5e1" />
-              <Text className="text-gray-400 text-lg mt-4">No notifications yet</Text>
+              <Text style={styles.emptyText}>No notifications yet</Text>
             </View>
           }
         />
@@ -141,3 +115,30 @@ export default function NotificationsScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  header: {
+    backgroundColor: PRIMARY, paddingTop: 24, paddingBottom: 24,
+    paddingHorizontal: 20, marginBottom: 16,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  heading: { color: '#ffffff', fontSize: 22, fontWeight: '700' },
+  unreadCount: { color: '#bfdbfe', fontSize: 14, marginTop: 4 },
+  markAllBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  markAllText: { color: '#ffffff', fontSize: 12, fontWeight: '600' },
+  notifCard: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    marginBottom: 12, padding: 16, borderRadius: 20, borderWidth: 1,
+  },
+  notifRead:   { backgroundColor: '#ffffff', borderColor: '#f1f5f9' },
+  notifUnread: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
+  notifIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
+  notifRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  notifTitle: { fontSize: 15, fontWeight: '700', color: '#1f2937', flex: 1, paddingRight: 8 },
+  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#3b82f6' },
+  notifMsg: { fontSize: 13, color: '#6b7280' },
+  notifTime: { fontSize: 11, color: '#94a3b8', marginTop: 6 },
+  emptyState: { alignItems: 'center', marginTop: 80 },
+  emptyText: { fontSize: 16, color: '#94a3b8', marginTop: 16 },
+});
